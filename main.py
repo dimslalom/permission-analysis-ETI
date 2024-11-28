@@ -29,15 +29,14 @@ def main():
     try:
         # Initialize components
         data_loader = DataLoader()
-        risk_analyzer = RiskAnalyzer()
-        visualizer = Visualizer()
-
-        # Load and process data
         logger.info("Fetching datasets...")
         data_loader.fetch_datasets()
         
         logger.info("Loading and cleaning data...")
         playstore_df, malware_df = data_loader.load_and_clean_data()
+        
+        risk_analyzer = RiskAnalyzer(malware_df)
+        visualizer = Visualizer()
 
         # Perform analysis
         logger.info("Performing risk analysis...")
@@ -49,6 +48,12 @@ def main():
             }), axis=1
         )
 
+        # Add Permission_Count column
+        playstore_df['Permission_Count'] = playstore_df['permissions'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+
+        # Debug output
+        logger.debug(f"Play Store DataFrame with Risk Score: {playstore_df[['App', 'permissions', 'Permission_Count', 'Risk_Score']].head()}")
+
         # Generate visualizations
         logger.info("Generating visualizations...")
         numeric_columns = playstore_df.select_dtypes(include=[np.number])
@@ -58,7 +63,7 @@ def main():
         category_distribution = playstore_df.groupby('Category')['Risk_Score'].mean().reset_index()
         visualizer.create_category_distribution(category_distribution, os.path.join(VISUALIZATIONS_DIR, 'category_distribution.png'))
         
-        visualizer.create_risk_scatter(playstore_df, os.path.join(VISUALIZATIONS_DIR, 'risk_scatter.html'), 'Permission_Count')
+        visualizer.create_risk_scatter(playstore_df, os.path.join(VISUALIZATIONS_DIR, 'risk_scatter.html'))
 
         # Save analysis results
         logger.info("Saving analysis results...")

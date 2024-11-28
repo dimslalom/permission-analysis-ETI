@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 import plotly.express as px
 from config import *
@@ -34,12 +35,30 @@ class Visualizer:
         plt.savefig(output_path)
         plt.close()
 
-    def create_risk_scatter(self, data, output_path, y_column):
-        fig = px.scatter(
-            data,
-            x='Size',
-            y=y_column,
-            color='Risk_Score',
-            title='App Risk Analysis'
-        )
-        fig.write_html(output_path)
+    def create_risk_scatter(self, df, output_path):
+        try:
+            # Create a copy and handle missing values properly
+            plot_df = df.copy()
+            
+            # Convert Reviews to numeric and fill NaN with median
+            plot_df['Reviews'] = pd.to_numeric(plot_df['Reviews'], errors='coerce')
+            plot_df['Reviews'] = plot_df['Reviews'].fillna(plot_df['Reviews'].median())
+            
+            # Log some statistics for debugging
+            self.logger.info(f"Reviews range: {plot_df['Reviews'].min()} to {plot_df['Reviews'].max()}")
+            self.logger.info(f"Number of apps with permissions: {len(plot_df[plot_df['permissions'].str.len() > 0])}")
+            
+            # Create scatter plot with cleaned data
+            fig = px.scatter(
+                plot_df,
+                x='Size',
+                y='Risk_Score',
+                color='Category',
+                size='Reviews',
+                hover_data=['App', 'permissions'],
+                title='App Risk Analysis'
+            )
+            fig.write_html(output_path)
+        except Exception as e:
+            self.logger.error(f"Error creating risk scatter plot: {str(e)}")
+            raise
